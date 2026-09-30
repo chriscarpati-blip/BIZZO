@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#090706">
+<title>BIZZO — 3D Story Prototype</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070504;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;color:white}
+canvas{display:block}
+#game{position:fixed;inset:0}
+#hud{position:fixed;inset:0;pointer-events:none;display:none}
+.top{position:absolute;top:env(safe-area-inset-top);left:0;right:0;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:27px;font-weight:1000;letter-spacing:-1px;color:#ffd34e;text-shadow:0 3px 15px #000}
+.coin{background:#120d0bf0;border:1px solid #ffffff18;border-radius:18px;padding:9px 12px;font-weight:900}
+#mission{position:absolute;left:16px;right:16px;top:75px;text-align:center;font-weight:900;text-shadow:0 2px 8px #000}
+#storyBox{position:absolute;left:14px;right:14px;bottom:28px;padding:16px 17px;border-radius:22px;background:linear-gradient(#130c0be8,#080505ed);border:1px solid #ffffff1c;backdrop-filter:blur(15px);box-shadow:0 15px 45px #0009}
+#speaker{color:#ffd34e;font-size:12px;font-weight:1000;text-transform:uppercase}
+#dialogue{font-size:18px;line-height:1.25;font-weight:750;margin-top:5px}
+#tap{margin-top:10px;color:#bba997;font-size:11px;text-align:right;font-weight:900}
+#intro{position:fixed;inset:0;z-index:20;background:#050403;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.introBg{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,#d88736 0,#7b321f 25%,#180b07 66%,#030202 100%);animation:bg 5s ease-in-out infinite alternate}
+@keyframes bg{to{transform:scale(1.12);filter:saturate(1.2)}}
+.grain{position:absolute;inset:-30%;opacity:.08;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:grain .2s steps(2) infinite}
+@keyframes grain{to{transform:translate(4%,3%)}}
+.introContent{position:relative;text-align:center;padding:25px;animation:introIn 1.2s cubic-bezier(.16,1,.3,1)}
+@keyframes introIn{from{opacity:0;transform:scale(.8) translateY(30px)}to{opacity:1;transform:none}}
+.title{font-size:76px;line-height:.8;font-weight:1000;letter-spacing:-4px;color:#fff1a0;text-shadow:0 7px 0 #70260f,0 14px 30px #0009}
+.sub{font-size:14px;font-weight:900;letter-spacing:4px;margin-top:17px}
+.year{display:inline-block;margin-top:20px;padding:7px 12px;border:1px solid #ffd34e55;border-radius:99px;color:#ffd34e;font-weight:1000}
+#introText{max-width:330px;margin:28px auto 0;color:#ead8c5;line-height:1.35;font-size:15px}
+.start{pointer-events:auto;border:0;margin-top:25px;border-radius:18px;padding:15px 28px;background:linear-gradient(#ffe47a,#f29c1e);box-shadow:0 5px #8c4e0a;color:#3c1c00;font-weight:1000;font-size:16px}
+.skip{pointer-events:auto;position:absolute;right:15px;bottom:calc(15px + env(safe-area-inset-bottom));border:1px solid #ffffff2a;background:#090706aa;color:#fff;padding:9px 12px;border-radius:12px;font-weight:800}
+#fade{position:fixed;inset:0;background:#000;z-index:15;pointer-events:none;opacity:0;transition:opacity .8s}
+#controls{position:absolute;left:15px;right:15px;bottom:145px;display:flex;justify-content:space-between;align-items:end;pointer-events:none}
+.joystick{width:108px;height:108px;border-radius:50%;background:#ffffff12;border:1px solid #ffffff1c;position:relative;pointer-events:auto;touch-action:none}
+.knob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px;border-radius:50%;background:#ffffff25;border:1px solid #ffffff2c}
+.action{pointer-events:auto;border:0;width:70px;height:70px;border-radius:50%;background:linear-gradient(#ffe17b,#e9971d);box-shadow:0 5px #804c0d;color:#3d2105;font-size:28px}
+#shopPrompt{position:absolute;left:50%;bottom:125px;transform:translateX(-50%);background:#0b0807dc;border:1px solid #ffd34e55;padding:10px 13px;border-radius:15px;font-weight:900;display:none}
+</style>
+</head>
+<body>
+<div id="game"></div>
+
+<div id="intro">
+  <div class="introBg"></div><div class="grain"></div>
+  <div class="introContent">
+    <div class="title">BIZZO</div>
+    <div class="sub">ITALIAN BAR TYCOON</div>
+    <div class="year">NAPOLI · 1986</div>
+    <div id="introText">Un piccolo bar. Un grande sogno. E una città che non sa ancora cosa sta per succedere.</div>
+    <button class="start" onclick="startStory()">▶ INIZIA LA STORIA</button>
+  </div>
+  <button class="skip" onclick="skipIntro()">SALTA INTRO</button>
+</div>
+
+<div id="fade"></div>
+
+<div id="hud">
+  <div class="top"><div class="logo">BIZZO</div><div class="coin">🪙 <span id="coins">1.000</span></div></div>
+  <div id="mission">OBIETTIVO: apri il bar</div>
+  <div id="storyBox" onclick="nextDialogue()">
+    <div id="speaker">GINO</div>
+    <div id="dialogue">...</div>
+    <div id="tap">TOCCA PER CONTINUARE ›</div>
+  </div>
+  <div id="controls">
+    <div class="joystick" id="joy"><div class="knob" id="knob"></div></div>
+    <button class="action" onclick="interact()">☝</button>
+  </div>
+  <div id="shopPrompt">☝ Tocca per entrare nel bar</div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.180.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.180.0/examples/jsm/"}}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+let scene,camera,renderer,clock;
+let gino,nonno,barGroup,streetGroup;
+let running=false, storyMode=true, dialogueIndex=0, coins=1000;
+let targetX=0,targetZ=0, joyActive=false, joyX=0,joyY=0;
+const fade=document.getElementById('fade');
+const hud=document.getElementById('hud');
+const intro=document.getElementById('intro');
+
+const dialogues=[
+ ["GINO","Mamma diceva sempre: \"Un giorno avrai un locale tutto tuo.\""],
+ ["GINO","Io ci ho creduto. Anche quando tutti mi dicevano di lasciar perdere."],
+ ["NONNO","Uè guagliò! Se vuoi clienti, devi dare loro una ragione per tornare."],
+ ["GINO","Allora cominciamo da qui. Un caffè perfetto, un sorriso... e un pizzico di follia."],
+ ["NARRATORE","Napoli, 1986. Il primo giorno di BIZZO sta per cominciare."],
+ ["GINO","Questo è solo l'inizio. Prima Napoli. Poi tutta l'Italia."],
+ ["NARRATORE","E un giorno... l'Europa."]
+];
+
+function setup(){
+ scene=new THREE.Scene();
+ scene.background=new THREE.Color(0x7d452c);
+ scene.fog=new THREE.Fog(0x7d452c,18,42);
+ camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,100);
+ renderer=new THREE.WebGLRenderer({antialias:true});
+ renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+ renderer.setSize(innerWidth,innerHeight);
+ renderer.shadowMap.enabled=true;
+ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ renderer.outputColorSpace=THREE.SRGBColorSpace;
+ document.getElementById('game').appendChild(renderer.domElement);
+ clock=new THREE.Clock();
+
+ const hemi=new THREE.HemisphereLight(0xffe0aa,0x28150f,2.1); scene.add(hemi);
+ const sun=new THREE.DirectionalLight(0xffc878,3.3); sun.position.set(-7,13,8); sun.castShadow=true; sun.shadow.mapSize.set(1024,1024); scene.add(sun);
+
+ buildWorld();
+ window.addEventListener('resize',resize);
+ setupJoystick();
+ animate();
+}
+
+function mat(c,rough=.8){return new THREE.MeshStandardMaterial({color:c,roughness:rough,metalness:.05})}
+function box(w,h,d,c,x,y,z){let m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;scene.add(m);return m}
+function cyl(r,h,c,x,y,z){let m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,24),mat(c));m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;scene.add(m);return m}
+
+function buildWorld(){
+ box(50,.25,50,0x3d2920,0,-.15,0);
+ // street markings
+ for(let z=-18;z<20;z+=5) box(1,.02,2.2,0xd7bd83,0,.01,z);
+ // sidewalks
+ box(4,.45,44,0x765545,-10,.15,0); box(4,.45,44,0x765545,10,.15,0);
+ // buildings
+ for(let i=0;i<7;i++){
+   let x=-18+i*6;
+   box(5,7+(i%3)*2,7, [0xc76d46,0xb65b3d,0xd58d50][i%3],x,3.5+(i%3),-9);
+   for(let y=2;y<7+(i%3)*2;y+=2.1) box(.9,1.2,.08,0x79a8a9,x-1.2,y,-5.43);
+ }
+ // bar
+ barGroup=new THREE.Group(); scene.add(barGroup); barGroup.position.set(0,0,-5);
+ const body=new THREE.Mesh(new THREE.BoxGeometry(10,4.6,4.3),mat(0xd5a15d));body.position.y=2.3;body.castShadow=body.receiveShadow=true;barGroup.add(body);
+ const aw=new THREE.Mesh(new THREE.BoxGeometry(10.5,.7,4.6),mat(0xb8382b));aw.position.y=4.75;aw.castShadow=true;barGroup.add(aw);
+ for(let x=-4.5;x<=4.5;x+=1.5){let stripe=new THREE.Mesh(new THREE.BoxGeometry(.72,.76,4.65),mat(0xffe9bd));stripe.position.set(x,4.75,.01);barGroup.add(stripe)}
+ const sign=new THREE.Mesh(new THREE.BoxGeometry(5.4,1.15,.2),mat(0x8e271d));sign.position.set(0,5.8,-2.25);barGroup.add(sign);
+ const textCanvas=document.createElement('canvas');textCanvas.width=700;textCanvas.height=150;let ctx=textCanvas.getContext('2d');ctx.fillStyle='#ffe79b';ctx.font='bold 92px Arial';ctx.textAlign='center';ctx.fillText('BIZZO',350,100);
+ const tex=new THREE.CanvasTexture(textCanvas);let sm=new THREE.Mesh(new THREE.PlaneGeometry(4.8,1),new THREE.MeshBasicMaterial({map:tex,transparent:true}));sm.position.set(0,5.8,-2.38);barGroup.add(sm);
+ box(3.2,2.4,.2,0x77bdd2,-2.5,2,-7.18);box(3.2,2.4,.2,0x77bdd2,2.5,2,-7.18);
+ // door
+ box(1.3,2.8,.22,0x3b2017,0,1.4,-7.25);
+ // table
+ cyl(1.1,.16,0x6e3b24,5,1.25,-1.5); cyl(.14,2.5,0x4a281a,5,.15,-1.5);
+ // people
+ gino=makePerson(0x2b1710,0xffffff,0xd99a72); gino.position.set(2,0,0); scene.add(gino);
+ nonno=makePerson(0x5d4735,0xe6cfa6,0xb97850); nonno.position.set(-3,0,2); scene.add(nonno);
+}
+
+function makePerson(hair,shirt,skin){
+ const g=new THREE.Group();
+ const leg1=new THREE.Mesh(new THREE.CylinderGeometry(.18,.21,1.5,12),mat(0x242027));leg1.position.set(-.28,.75,0);leg1.castShadow=true;g.add(leg1);
+ const leg2=leg1.clone();leg2.position.x=.28;g.add(leg2);
+ const body=new THREE.Mesh(new THREE.CapsuleGeometry(.62,1.15,6,12),mat(shirt));body.position.y=2.0;body.castShadow=true;g.add(body);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.62,24,16),mat(skin));head.position.y=3.2;head.castShadow=true;g.add(head);
+ const hairM=new THREE.Mesh(new THREE.SphereGeometry(.64,24,12,0,Math.PI*2,0,Math.PI*.45),mat(hair));hairM.position.y=3.55;hairM.castShadow=true;g.add(hairM);
+ const arm1=new THREE.Mesh(new THREE.CapsuleGeometry(.16,.9,5,10),mat(shirt));arm1.position.set(-.78,2.1,0);arm1.rotation.z=-.25;g.add(arm1);
+ const arm2=arm1.clone();arm2.position.x=.78;arm2.rotation.z=.25;g.add(arm2);
+ g.userData.baseY=0;g.userData.phase=Math.random()*6;return g;
+}
+
+function animate(){
+ requestAnimationFrame(animate);
+ const dt=Math.min(.05,clock.getDelta());
+ if(gino){let t=clock.elapsedTime;gino.position.y=Math.sin(t*3+gino.userData.phase)*.025;nonno.position.y=Math.sin(t*2+nonno.userData.phase)*.018;
+   if(!storyMode && running){let speed=2.8;gino.position.x += joyX*speed*dt;gino.position.z += joyY*speed*dt;gino.position.x=THREE.MathUtils.clamp(gino.position.x,-8,8);gino.position.z=THREE.MathUtils.clamp(gino.position.z,-3,8);}
+ }
+ if(camera&&gino){
+   let desired=new THREE.Vector3(gino.position.x,5.6,gino.position.z+9.5);
+   camera.position.lerp(desired,.075);
+   camera.lookAt(gino.position.x,2.0,gino.position.z-1);
+ }
+ renderer.render(scene,camera);
+}
+
+window.startStory=function(){
+ intro.style.display='none'; hud.style.display='block'; running=true;storyMode=true;dialogueIndex=0;setDialogue(); cinematicCamera();
+}
+window.skipIntro=function(){intro.style.display='none';hud.style.display='block';running=true;storyMode=false;document.getElementById('storyBox').style.display='none';document.getElementById('mission').textContent='OBIETTIVO: entra nel BIZZO';}
+function cinematicCamera(){
+ let start=performance.now(),dur=10500;
+ function step(now){
+   if(!storyMode)return;
+   let p=Math.min(1,(now-start)/dur),e=p*p*(3-2*p);
+   camera.position.set(12-14*e,7.5-2.5*e,15-15*e);
+   camera.lookAt(0,2.2,-4);
+   if(p<1)requestAnimationFrame(step); else {storyMode=false;document.getElementById('mission').textContent='OBIETTIVO: entra nel BIZZO';}
+ }
+ requestAnimationFrame(step);
+}
+function setDialogue(){
+ let d=dialogues[dialogueIndex];document.getElementById('speaker').textContent=d[0];document.getElementById('dialogue').textContent=d[1];
+}
+window.nextDialogue=function(){
+ if(!storyMode)return;
+ dialogueIndex++;
+ if(dialogueIndex>=dialogues.length){storyMode=false;document.getElementById('storyBox').style.display='none';document.getElementById('mission').textContent='OBIETTIVO: entra nel BIZZO';return}
+ setDialogue();
+}
+window.interact=function(){
+ if(storyMode)return;
+ if(gino.position.distanceTo(new THREE.Vector3(0,0,-3.2))<4){
+   coins+=100;document.getElementById('coins').textContent=coins.toLocaleString('it-IT');
+   document.getElementById('mission').textContent='☕ Giornata 1 completata · +100 Bizzo';
+   document.getElementById('shopPrompt').style.display='block';
+   setTimeout(()=>document.getElementById('shopPrompt').style.display='none',1800);
+ }else{
+   document.getElementById('mission').textContent='Avvicinati al BIZZO BAR';
+ }
+}
+function setupJoystick(){
+ const joy=document.getElementById('joy'),knob=document.getElementById('knob');
+ function move(e){if(!joyActive)return;let r=joy.getBoundingClientRect(),x=e.touches?e.touches[0].clientX:e.clientX,y=e.touches?e.touches[0].clientY:e.clientY;let dx=x-(r.left+r.width/2),dy=y-(r.top+r.height/2),len=Math.hypot(dx,dy),max=34;if(len>max){dx=dx/len*max;dy=dy/len*max}joyX=dx/max;joyY=dy/max;knob.style.transform=`translate(${dx}px,${dy}px)`}
+ function end(){joyActive=false;joyX=joyY=0;knob.style.transform='translate(0,0)'}
+ joy.addEventListener('touchstart',e=>{joyActive=true;move(e)},{passive:false});joy.addEventListener('touchmove',e=>{e.preventDefault();move(e)},{passive:false});joy.addEventListener('touchend',end);
+}
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}
+setup();
+</script>
+</body>
+</html>
